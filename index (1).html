@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>辯神殿堂 DebateArena AI - 多鄰國風知識王辯論大賽</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/lib/index.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Canvas Confetti CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts: Feather & Bold Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            duoGreen: '#58cc02',
+            duoGreenDark: '#46a302',
+            duoBlue: '#1cb0f6',
+            duoBlueDark: '#1899d6',
+            duoYellow: '#ffc800',
+            duoYellowDark: '#e5a100',
+            duoRed: '#ff4b4b',
+            duoRedDark: '#ea2b2b',
+            duoPurple: '#ce82ff',
+            duoPurpleDark: '#a55eea',
+            duoCardBg: '#ffffff',
+            duoBg: '#f7f9fa'
+          },
+          fontFamily: {
+            fredoka: ['Fredoka', 'Noto Sans TC', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Fredoka', 'Noto Sans TC', sans-serif;
+      background-color: #f0f4f8;
+      user-select: none;
+    }
+    
+    /* Duolingo 3D Tactile Buttons */
+    .btn-3d {
+      transition: all 0.1s ease;
+      box-shadow: 0 5px 0 var(--btn-shadow-color, #46a302);
+    }
+    .btn-3d:active:not(:disabled) {
+      transform: translateY(4px);
+      box-shadow: 0 1px 0 var(--btn-shadow-color, #46a302);
+    }
+
+    .card-3d {
+      box-shadow: 0 8px 0 rgba(0, 0, 0, 0.06), 0 0 0 3px #e5e9f0;
+    }
+
+    /* Screen Shake Animation */
+    @keyframes shake {
+      0%, 100% { transform: translate(0, 0) rotate(0deg); }
+      20% { transform: translate(-8px, 6px) rotate(-3deg); }
+      40% { transform: translate(8px, -6px) rotate(3deg); }
+      60% { transform: translate(-6px, -4px) rotate(-2deg); }
+      80% { transform: translate(6px, 4px) rotate(2deg); }
+    }
+    .animate-shake {
+      animation: shake 0.5s ease-in-out;
+    }
+
+    /* Wheel Animation */
+    .wheel-spin {
+      transition: transform 3s cubic-bezier(0.15, 0.99, 0.18, 0.99);
+    }
+
+    /* Speech Bubble Triangle */
+    .bubble-left::before {
+      content: '';
+      position: absolute;
+      left: -12px;
+      top: 20px;
+      border-width: 8px 12px 8px 0;
+      border-color: transparent #ffffff transparent transparent;
+    }
+    .bubble-right::before {
+      content: '';
+      position: absolute;
+      right: -12px;
+      top: 20px;
+      border-width: 8px 0 8px 12px;
+      border-color: transparent transparent transparent #1cb0f6;
+    }
+
+    /* OBJECTION Sticker Bounce */
+    @keyframes objectionPop {
+      0% { transform: scale(0) rotate(-20deg); opacity: 0; }
+      50% { transform: scale(1.3) rotate(5deg); opacity: 1; }
+      70% { transform: scale(0.9) rotate(-3deg); }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+    .animate-objection {
+      animation: objectionPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    /* Curtain Slide Overlay */
+    .curtain-overlay {
+      transition: transform 0.5s cubic-bezier(0.77, 0, 0.175, 1);
+    }
+  </style>
+</head>
+
+<body class="h-full flex flex-col justify-between text-slate-800 antialiased overflow-x-hidden">
+
+  <!-- ==================== TOP NAV STATS BAR (知識王風格) ==================== -->
+  <header class="bg-white border-b-4 border-slate-200 sticky top-0 z-40 px-4 py-3 shadow-sm">
+    <div class="max-w-5xl mx-auto flex items-center justify-between">
+      <!-- Logo & Title -->
+      <div class="flex items-center space-x-3 cursor-pointer" onclick="switchScreen('lobby')">
+        <div class="w-10 h-10 bg-duoGreen rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-[0_3px_0_#46a302]">
+          <i class="fa-solid fa-gavel"></i>
+        </div>
+        <div>
+          <h1 class="font-black text-xl text-slate-800 leading-tight tracking-wide">辯神殿堂</h1>
+          <p class="text-xs font-bold text-slate-400">DebateArena AI</p>
+        </div>
+      </div>
+
+      <!-- Player Level & Stats -->
+      <div class="flex items-center space-x-3 text-sm font-black">
+        <!-- Stars -->
+        <div class="flex items-center bg-amber-100 text-amber-600 px-3 py-1.5 rounded-2xl border-2 border-amber-300">
+          <i class="fa-solid fa-star text-amber-500 mr-1.5 text-base"></i>
+          <span id="player-stars">12</span>
+        </div>
+        <!-- Streak -->
+        <div class="flex items-center bg-orange-100 text-orange-600 px-3 py-1.5 rounded-2xl border-2 border-orange-300">
+          <i class="fa-solid fa-fire text-orange-500 mr-1.5 text-base"></i>
+          <span id="player-streak">3 連勝</span>
+        </div>
+        <!-- Rank Title -->
+        <div class="hidden sm:flex items-center bg-purple-100 text-purple-600 px-3 py-1.5 rounded-2xl border-2 border-purple-300">
+          <i class="fa-solid fa-crown text-purple-500 mr-1.5"></i>
+          <span id="player-rank">鑽石辯手</span>
+        </div>
+        <!-- API Settings Modal Trigger -->
+        <button onclick="toggleApiModal()" class="w-9 h-9 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl border-2 border-slate-300 flex items-center justify-center transition">
+          <i class="fa-solid fa-gear"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 max-w-5xl w-full mx-auto p-4 relative">
+
+    <!-- ==================== SCREEN 1: 遊戲大廳 LOBBY ==================== -->
+    <section id="screen-lobby" class="space-y-6">
+      <!-- Banner -->
+      <div class="bg-gradient-to-r from-duoGreen to-emerald-500 rounded-3xl p-6 text-white card-3d relative overflow-hidden">
+        <div class="relative z-10 max-w-lg">
+          <span class="bg-white/20 px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase">多鄰國 x 知識王 聯名經典</span>
+          <h2 class="text-3xl font-black mt-2 mb-2">準備好拍案叫絕了嗎？</h2>
+          <p class="text-emerald-100 text-sm font-bold leading-relaxed mb-4">挑戰四大可愛神獸對手，拆解邏輯謬誤，奪取辯神榮耀！</p>
+          <div class="flex space-x-3">
+            <button onclick="openTopicHub('free')" class="bg-white text-duoGreen hover:bg-slate-50 px-5 py-3 rounded-2xl font-black text-sm shadow-[0_4px_0_#d0d0d0] active:translate-y-1 active:shadow-none transition">
+              <i class="fa-solid fa-bolt mr-2"></i>自由練習對決
+            </button>
+          </div>
+        </div>
+        <img src="assets/gavel.svg" class="absolute -right-4 -bottom-6 w-40 h-40 opacity-30 transform -rotate-12 pointer-events-none">
+      </div>
+
+      <!-- Stage Map Section (知識王關卡地圖) -->
+      <div>
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-black text-slate-700 flex items-center">
+            <i class="fa-solid fa-map-location-dot text-duoBlue mr-2"></i>辯題闖關地圖
+          </h3>
+          <span class="text-xs font-bold text-slate-400">通關可獲得 ⭐️ 與限定迷因徽章</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Stage 1: 柴犬 -->
+          <div class="bg-white rounded-3xl p-5 border-4 border-slate-200 card-3d flex items-center justify-between hover:border-duoYellow transition cursor-pointer" onclick="selectStage(1)">
+            <div class="flex items-center space-x-4">
+              <img src="assets/shiba.svg" class="w-16 h-16">
+              <div>
+                <span class="bg-amber-100 text-amber-700 text-xs font-black px-2.5 py-0.5 rounded-full">STAGE 1</span>
+                <h4 class="font-black text-lg text-slate-800 mt-1">柴大俠 🐶</h4>
+                <p class="text-xs font-bold text-slate-400">校園與日常生活類 / 熱血情緒型</p>
+              </div>
+            </div>
+            <button class="bg-duoYellow text-slate-900 font-black px-4 py-2.5 rounded-2xl text-sm shadow-[0_4px_0_#e5a100]">挑戰</button>
+          </div>
+
+          <!-- Stage 2: 貓貓 -->
+          <div class="bg-white rounded-3xl p-5 border-4 border-slate-200 card-3d flex items-center justify-between hover:border-duoPurple transition cursor-pointer" onclick="selectStage(2)">
+            <div class="flex items-center space-x-4">
+              <img src="assets/cat_lawyer.svg" class="w-16 h-16">
+              <div>
+                <span class="bg-purple-100 text-purple-700 text-xs font-black px-2.5 py-0.5 rounded-full">STAGE 2</span>
+                <h4 class="font-black text-lg text-slate-800 mt-1">喵律師 🐱</h4>
+                <p class="text-xs font-bold text-slate-400">科技與AI倫理類 / 抓包謬誤連擊</p>
+              </div>
+            </div>
+            <button class="bg-duoPurple text-white font-black px-4 py-2.5 rounded-2xl text-sm shadow-[0_4px_0_#a55eea]">挑戰</button>
+          </div>
+
+          <!-- Stage 3: 狐狸 -->
+          <div class="bg-white rounded-3xl p-5 border-4 border-slate-200 card-3d flex items-center justify-between hover:border-duoRed transition cursor-pointer" onclick="selectStage(3)">
+            <div class="flex items-center space-x-4">
+              <img src="assets/fox_scholar.svg" class="w-16 h-16">
+              <div>
+                <span class="bg-rose-100 text-rose-700 text-xs font-black px-2.5 py-0.5 rounded-full">STAGE 3</span>
+                <h4 class="font-black text-lg text-slate-800 mt-1">狐長老 🦊</h4>
+                <p class="text-xs font-bold text-slate-400">社會福利與經濟 / 嚴密邏輯壁壘</p>
+              </div>
+            </div>
+            <button class="bg-duoRed text-white font-black px-4 py-2.5 rounded-2xl text-sm shadow-[0_4px_0_#ea2b2b]">挑戰</button>
+          </div>
+
+          <!-- Stage 4: 水豚 -->
+          <div class="bg-white rounded-3xl p-5 border-4 border-slate-200 card-3d flex items-center justify-between hover:border-duoBlue transition cursor-pointer" onclick="selectStage(4)">
+            <div class="flex items-center space-x-4">
+              <img src="assets/capybara_judge.svg" class="w-16 h-16">
+              <div>
+                <span class="bg-sky-100 text-sky-700 text-xs font-black px-2.5 py-0.5 rounded-full">STAGE 4 · 終極關卡</span>
+                <h4 class="font-black text-lg text-slate-800 mt-1">水豚法官 🦫</h4>
+                <p class="text-xs font-bold text-slate-400">深層哲學與道德 / 沉思定身術</p>
+              </div>
+            </div>
+            <button class="bg-duoBlue text-white font-black px-4 py-2.5 rounded-2xl text-sm shadow-[0_4px_0_#1899d6]">對決</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SCREEN 2: 題庫大廳與幸運轉盤 (TOPIC HUB) ==================== -->
+    <section id="screen-topic-hub" class="hidden space-y-6">
+      <div class="flex items-center justify-between">
+        <button onclick="switchScreen('lobby')" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-2xl font-black text-sm">
+          <i class="fa-solid fa-arrow-left mr-2"></i>返回大廳
+        </button>
+        <h2 class="text-2xl font-black text-slate-800">選擇今日辯題</h2>
+        <div></div>
+      </div>
+
+      <!-- Wheel Spinner Section -->
+      <div class="bg-white rounded-3xl p-6 border-4 border-slate-200 card-3d text-center relative overflow-hidden">
+        <h3 class="text-lg font-black text-slate-700 mb-2">🎲 知識王幸運大轉盤</h3>
+        <p class="text-xs font-bold text-slate-400 mb-4">沒想法？讓幸運輪盤為你決定命運議題！</p>
+
+        <div class="relative w-64 h-64 mx-auto my-4">
+          <!-- Pointer -->
+          <div class="absolute -top-3 left-1/2 -translate-x-1/2 z-20 text-duoRed text-3xl filter drop-shadow-md">
+            <i class="fa-solid fa-caret-down"></i>
+          </div>
+          <!-- Wheel Canvas -->
+          <div id="wheel-container" class="w-full h-full rounded-full border-8 border-duoYellow shadow-inner overflow-hidden wheel-spin relative bg-amber-50">
+            <canvas id="wheel-canvas" width="256" height="256"></canvas>
+          </div>
+        </div>
+
+        <button onclick="spinWheel()" class="bg-duoYellow text-slate-900 font-black text-base px-8 py-3 rounded-2xl shadow-[0_5px_0_#e5a100] active:translate-y-1 active:shadow-none transition">
+          <i class="fa-solid fa-rotate mr-2"></i>旋轉抽題！
+        </button>
+      </div>
+
+      <!-- AI Search & Preset Topics -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Preset Topic Wall -->
+        <div class="md:col-span-2 bg-white rounded-3xl p-6 border-4 border-slate-200 card-3d">
+          <h3 class="text-lg font-black text-slate-700 mb-4 flex items-center">
+            <i class="fa-solid fa-fire text-duoRed mr-2"></i>經典辯題卡片庫
+          </h3>
+          <div id="preset-topics-list" class="space-y-3">
+            <!-- Dynamic Topics Inserted Here -->
+          </div>
+        </div>
+
+        <!-- AI Keyword Generator & Custom -->
+        <div class="bg-white rounded-3xl p-6 border-4 border-slate-200 card-3d space-y-4">
+          <h3 class="text-lg font-black text-slate-700 flex items-center">
+            <i class="fa-solid fa-wand-magic-sparkles text-duoPurple mr-2"></i>AI 時事辯題搜尋
+          </h3>
+          <p class="text-xs font-bold text-slate-400">輸入關鍵字（如：AI繪圖、無條件基本收入），生成全新辯題：</p>
+          <input id="ai-keyword-input" type="text" placeholder="輸入關鍵字..." class="w-full px-4 py-3 rounded-2xl border-2 border-slate-200 font-bold text-sm focus:border-duoBlue outline-none">
+          <button onclick="generateAiTopic()" class="w-full bg-duoPurple text-white font-black py-3 rounded-2xl shadow-[0_4px_0_#a55eea] text-sm">
+            🚀 生成專屬辯題
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SCREEN 3: 知識王卡牌對戰戰場 (BATTLE ARENA) ==================== -->
+    <section id="screen-battle" class="hidden space-y-4">
+      <!-- Top Arena Header: Player vs Mascot HP -->
+      <div class="bg-white rounded-3xl p-4 border-4 border-slate-200 card-3d flex items-center justify-between">
+        <!-- Player Stats -->
+        <div class="flex items-center space-x-3 w-5/12">
+          <div class="w-12 h-12 bg-duoBlue rounded-2xl flex items-center justify-center text-white text-xl font-black">
+            <i class="fa-solid fa-user"></i>
+          </div>
+          <div class="flex-1">
+            <div class="flex justify-between text-xs font-black mb-1">
+              <span>玩家信心值</span>
+              <span id="player-hp-text">100/100</span>
+            </div>
+            <div class="w-full bg-slate-100 h-4 rounded-full overflow-hidden border border-slate-200">
+              <div id="player-hp-bar" class="bg-duoBlue h-full w-full transition-all duration-500"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VS Badge -->
+        <div class="w-10 h-10 bg-duoRed text-white font-black rounded-full flex items-center justify-center shadow-md text-sm italic">
+          VS
+        </div>
+
+        <!-- Mascot Stats -->
+        <div class="flex items-center space-x-3 w-5/12 flex-row-reverse space-x-reverse">
+          <img id="battle-mascot-avatar" src="assets/shiba.svg" class="w-12 h-12">
+          <div class="flex-1">
+            <div class="flex justify-between text-xs font-black mb-1">
+              <span id="battle-mascot-name">柴大俠</span>
+              <span id="mascot-hp-text">100/100</span>
+            </div>
+            <div class="w-full bg-slate-100 h-4 rounded-full overflow-hidden border border-slate-200">
+              <div id="mascot-hp-bar" class="bg-duoRed h-full w-full transition-all duration-500"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Current Topic Card -->
+      <div class="bg-gradient-to-r from-amber-400 to-duoYellow text-slate-900 rounded-2xl p-4 font-black text-center shadow-md">
+        <span id="battle-topic-side" class="bg-white/40 px-3 py-0.5 rounded-full text-xs uppercase tracking-wider mr-2">【正方持論】</span>
+        <span id="battle-topic-title" class="text-base">辯題：高中生是否應該全面取消晚自習？</span>
+      </div>
+
+      <!-- Main Debate Dialogue Box -->
+      <div id="chat-stream-box" class="bg-white rounded-3xl p-5 border-4 border-slate-200 card-3d h-80 overflow-y-auto space-y-4 relative">
+        <!-- OBJECTION Overlay Sticker -->
+        <div id="objection-sticker" class="hidden absolute inset-0 m-auto w-64 h-32 z-30 pointer-events-none flex items-center justify-center">
+          <img src="assets/objection.svg" class="w-full h-full animate-objection">
+        </div>
+      </div>
+
+      <!-- Player Input Area -->
+      <div class="bg-white rounded-3xl p-4 border-4 border-slate-200 card-3d flex items-center space-x-3">
+        <textarea id="user-argument-input" rows="2" placeholder="在此輸入你的攻防反駁論點..." class="flex-1 p-3 rounded-2xl border-2 border-slate-200 font-bold text-sm focus:border-duoGreen outline-none resize-none"></textarea>
+        <button onclick="submitArgument()" class="bg-duoGreen text-white font-black px-6 py-4 rounded-2xl shadow-[0_4px_0_#46a302] text-sm whitespace-nowrap">
+          <i class="fa-solid fa-paper-plane mr-2"></i>發言！
+        </button>
+      </div>
+    </section>
+
+    <!-- ==================== SCREEN 4: AI 裁判團與雷達圖結算 (JUDGE RESULT) ==================== -->
+    <section id="screen-result" class="hidden space-y-6">
+      <div class="bg-white rounded-3xl p-6 border-4 border-slate-200 card-3d text-center space-y-4">
+        <!-- Header -->
+        <div class="inline-block bg-amber-100 text-amber-700 px-4 py-1.5 rounded-full font-black text-sm">
+          🏆 辯論大賽終場講評
+        </div>
+        <h2 id="result-title-text" class="text-3xl font-black text-slate-800">精彩的邏輯對決！</h2>
+
+        <!-- Radar Chart + Judges Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+          <!-- Chart -->
+          <div class="w-full h-64">
+            <canvas id="radarChart"></canvas>
+          </div>
+
+          <!-- 3 AI Judges Comments -->
+          <div class="space-y-3 text-left">
+            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+              <h4 class="font-black text-xs text-duoBlue flex items-center">
+                <i class="fa-solid fa-scale-balanced mr-1.5"></i>⚖️ 邏輯嚴謹裁判
+              </h4>
+              <p id="judge-logic-comment" class="text-xs font-bold text-slate-600 mt-1">論點推論結構完整，成功避免了滑坡謬誤。</p>
+            </div>
+            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+              <h4 class="font-black text-xs text-duoRed flex items-center">
+                <i class="fa-solid fa-heart mr-1.5"></i>💖 大眾情感裁判
+              </h4>
+              <p id="judge-emotion-comment" class="text-xs font-bold text-slate-600 mt-1">舉例生動貼切，極具現場說服力與共鳴。</p>
+            </div>
+            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+              <h4 class="font-black text-xs text-duoGreen flex items-center">
+                <i class="fa-solid fa-toolbox mr-1.5"></i>🛠️ 實務效益裁判
+              </h4>
+              <p id="judge-practical-comment" class="text-xs font-bold text-slate-600 mt-1">方案可行性高，防守邊界清晰明確。</p>
+            </div>
+          </div>
+        </div>
+
+        <button onclick="switchScreen('lobby')" class="bg-duoGreen text-white font-black text-base px-8 py-3.5 rounded-2xl shadow-[0_5px_0_#46a302]">
+          <i class="fa-solid fa-house mr-2"></i>回到辯神大廳
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== CURTAIN TRANSITION OVERLAY ==================== -->
+  <div id="curtain-overlay" class="fixed inset-0 bg-duoGreen z-50 flex flex-col items-center justify-center text-white pointer-events-none curtain-overlay transform translate-y-full">
+    <div class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center text-4xl mb-4 animate-bounce">
+      💡
+    </div>
+    <h3 class="text-2xl font-black tracking-wider">載入中...</h3>
+    <p id="curtain-tip" class="text-sm font-bold text-emerald-100 mt-2">小知識：避免稻草人謬誤可以讓你的邏輯更不可震撼！</p>
+  </div>
+
+  <!-- API KEY MODAL -->
+  <div id="api-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 border-4 border-slate-200 card-3d max-w-md w-full space-y-4">
+      <h3 class="text-xl font-black text-slate-800 flex items-center">
+        <i class="fa-solid fa-key text-duoYellow mr-2"></i>Gemini API 設定
+      </h3>
+      <p class="text-xs font-bold text-slate-500">輸入 API Key 可解鎖真實 Gemini 3 Flash 即時 LLM 語言攻防與連網搜尋：</p>
+      <input id="api-key-input" type="password" placeholder="AIzaSy..." class="w-full p-3 rounded-2xl border-2 border-slate-200 font-bold text-sm outline-none focus:border-duoBlue">
+      <div class="flex justify-end space-x-2">
+        <button onclick="toggleApiModal()" class="bg-slate-200 font-black px-4 py-2 rounded-2xl text-sm">取消</button>
+        <button onclick="saveApiKey()" class="bg-duoBlue text-white font-black px-5 py-2 rounded-2xl text-sm shadow-[0_3px_0_#1899d6]">儲存 Key</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- APPLICATION LOGIC JS -->
+  <script>
+    // State Management
+    let state = {
+      stars: 12,
+      streak: 3,
+      rank: '鑽石辯手',
+      apiKey: '',
+      currentStage: 1,
+      currentTopic: '高中生是否應該全面取消晚自習？',
+      playerHp: 100,
+      mascotHp: 100,
+      mascots: {
+        1: { name: '柴大俠 🐶', avatar: 'assets/shiba.svg', skill: '熱血情緒渲染' },
+        2: { name: '喵律師 🐱', avatar: 'assets/cat_lawyer.svg', skill: '抓包謬誤連擊' },
+        3: { name: '狐長老 🦊', avatar: 'assets/fox_scholar.svg', skill: '嚴密邏輯壁壘' },
+        4: { name: '水豚法官 🦫', avatar: 'assets/capybara_judge.svg', skill: '沉思定身術' }
+      }
+    };
+
+    const presetTopics = [
+      { id: 1, title: '高中生是否應該全面取消晚自習？', cat: '教育生活' },
+      { id: 2, title: 'AI 產出之著作是否應當享有版權？', cat: '科技倫理' },
+      { id: 3, title: '政府是否應實施無條件基本收入 (UBI)？', cat: '社會經濟' },
+      { id: 4, title: '為了多數人的福祉，是否能犧牲少數人權益？', cat: '哲學思辨' }
+    ];
+
+    // Sound Synthesizer via Web Audio API
+    function playSound(type) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        if (type === 'gavel') {
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(120, ctx.currentTime);
+          gain.gain.setValueAtTime(0.5, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.3);
+        } else if (type === 'pop') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(400, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.1);
+          gain.gain.setValueAtTime(0.3, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.1);
+        }
+      } catch(e){}
+    }
+
+    // Screen Switching with Curtain Effect
+    function switchScreen(screenId) {
+      playSound('pop');
+      const curtain = document.getElementById('curtain-overlay');
+      curtain.classList.remove('translate-y-full');
+
+      setTimeout(() => {
+        document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
+        document.getElementById(`screen-${screenId}`).classList.remove('hidden');
+
+        if (screenId === 'topic-hub') renderTopics();
+
+        setTimeout(() => {
+          curtain.classList.add('translate-y-full');
+        }, 300);
+      }, 500);
+    }
+
+    // Render Preset Topics
+    function renderTopics() {
+      const container = document.getElementById('preset-topics-list');
+      container.innerHTML = presetTopics.map(t => `
+        <div class="bg-slate-50 p-3.5 rounded-2xl border-2 border-slate-200 flex items-center justify-between hover:border-duoGreen transition cursor-pointer" onclick="startBattle('${t.title}')">
+          <div>
+            <span class="bg-duoGreen/10 text-duoGreen text-xs font-black px-2 py-0.5 rounded-md">${t.cat}</span>
+            <h4 class="font-black text-sm text-slate-800 mt-1">${t.title}</h4>
+          </div>
+          <button class="bg-duoGreen text-white text-xs font-black px-3 py-1.5 rounded-xl">開戰</button>
+        </div>
+      `).join('');
+      drawWheel();
+    }
+
+    // Lucky Wheel Logic
+    function drawWheel() {
+      const canvas = document.getElementById('wheel-canvas');
+      const ctx = canvas.getContext('2d');
+      const colors = ['#ffc800', '#1cb0f6', '#ce82ff', '#ff4b4b'];
+      const slices = presetTopics.length;
+      const angle = (2 * Math.PI) / slices;
+
+      for(let i=0; i<slices; i++) {
+        ctx.beginPath();
+        ctx.fillStyle = colors[i % colors.length];
+        ctx.moveTo(128, 128);
+        ctx.arc(128, 128, 120, i*angle, (i+1)*angle);
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+
+    function spinWheel() {
+      playSound('pop');
+      const container = document.getElementById('wheel-container');
+      const randomDeg = 1440 + Math.floor(Math.random() * 360);
+      container.style.transform = `rotate(${randomDeg}deg)`;
+      
+      setTimeout(() => {
+        const topic = presetTopics[Math.floor(Math.random() * presetTopics.length)].title;
+        startBattle(topic);
+      }, 3200);
+    }
+
+    // Select Stage from Lobby
+    function selectStage(stageNum) {
+      state.currentStage = stageNum;
+      openTopicHub('stage');
+    }
+
+    function openTopicHub(mode) {
+      switchScreen('topic-hub');
+    }
+
+    // Start Battle Setup
+    function startBattle(topicTitle) {
+      state.currentTopic = topicTitle;
+      state.playerHp = 100;
+      state.mascotHp = 100;
+
+      const mascot = state.mascots[state.currentStage];
+      document.getElementById('battle-mascot-avatar').src = mascot.avatar;
+      document.getElementById('battle-mascot-name').innerText = mascot.name;
+      document.getElementById('battle-topic-title').innerText = `辯題：${topicTitle}`;
+      
+      updateHpBars();
+      
+      const streamBox = document.getElementById('chat-stream-box');
+      streamBox.innerHTML = `
+        <div class="flex items-start space-x-3">
+          <img src="${mascot.avatar}" class="w-10 h-10">
+          <div class="bg-slate-100 p-3 rounded-2xl relative bubble-left max-w-xs text-xs font-bold text-slate-700">
+            我是 ${mascot.name}！被動招式【${mascot.skill}】已準備就緒，請出招吧！
+          </div>
+        </div>
+      `;
+
+      switchScreen('battle');
+    }
+
+    function updateHpBars() {
+      document.getElementById('player-hp-bar').style.width = `${state.playerHp}%`;
+      document.getElementById('player-hp-text').innerText = `${state.playerHp}/100`;
+      document.getElementById('mascot-hp-bar').style.width = `${state.mascotHp}%`;
+      document.getElementById('mascot-hp-text').innerText = `${state.mascotHp}/100`;
+    }
+
+    // Submit Argument
+    function submitArgument() {
+      const input = document.getElementById('user-argument-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      playSound('pop');
+      const streamBox = document.getElementById('chat-stream-box');
+      
+      // User Message
+      streamBox.innerHTML += `
+        <div class="flex items-start space-x-3 flex-row-reverse space-x-reverse">
+          <div class="w-10 h-10 bg-duoBlue text-white rounded-full flex items-center justify-center font-black">用</div>
+          <div class="bg-duoBlue text-white p-3 rounded-2xl relative bubble-right max-w-xs text-xs font-bold">
+            ${text}
+          </div>
+        </div>
+      `;
+      input.value = '';
+      streamBox.scrollTop = streamBox.scrollHeight;
+
+      // Trigger Objection FX & Mascot Response
+      setTimeout(() => {
+        triggerObjection();
+        
+        state.mascotHp = Math.max(0, state.mascotHp - 25);
+        updateHpBars();
+
+        const mascot = state.mascots[state.currentStage];
+        streamBox.innerHTML += `
+          <div class="flex items-start space-x-3">
+            <img src="${mascot.avatar}" class="w-10 h-10">
+            <div class="bg-slate-100 p-3 rounded-2xl relative bubble-left max-w-xs text-xs font-bold text-slate-700">
+              【${mascot.name}的反擊】：你的主張很有創意，但忽略了實務可行性！
+            </div>
+          </div>
+        `;
+        streamBox.scrollTop = streamBox.scrollHeight;
+
+        if (state.mascotHp <= 0) {
+          setTimeout(showResult, 1500);
+        }
+      }, 800);
+    }
+
+    function triggerObjection() {
+      playSound('gavel');
+      const sticker = document.getElementById('objection-sticker');
+      sticker.classList.remove('hidden');
+      document.body.classList.add('animate-shake');
+
+      setTimeout(() => {
+        sticker.classList.add('hidden');
+        document.body.classList.remove('animate-shake');
+      }, 700);
+    }
+
+    // Results & Chart.js
+    function showResult() {
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+      switchScreen('result');
+
+      const ctx = document.getElementById('radarChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'radar',
+        data: {
+          labels: ['邏輯嚴謹', '論據充分', '應變敏捷', '現場說服'],
+          datasets: [{
+            label: '本場辯論表現',
+            data: [92, 85, 88, 95],
+            backgroundColor: 'rgba(88, 204, 2, 0.2)',
+            borderColor: '#58cc02',
+            borderWidth: 3
+          }]
+        },
+        options: {
+          scales: { r: { suggestMin: 50, max: 100 } },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    function toggleApiModal() {
+      document.getElementById('api-modal').classList.toggle('hidden');
+    }
+
+    function saveApiKey() {
+      state.apiKey = document.getElementById('api-key-input').value;
+      toggleApiModal();
+    }
+
+    // Init
+    window.onload = () => {
+      renderTopics();
+    };
+  </script>
+</body>
+</html>
